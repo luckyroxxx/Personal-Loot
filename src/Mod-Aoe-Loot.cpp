@@ -23,8 +23,8 @@ public:
         float range = 45.0f;
         uint32 gold = 0;
 
-        std::list<Creature*> creaturedie;
-        player->GetDeadCreatureListInGrid(creaturedie, range);
+        std::list<Creature*> creatureDie;
+        player->GetDeadCreatureListInGrid(creatureDie, range);
 
         Group* group = player->GetGroup();
         std::vector<Player*> groupMembers;
@@ -49,9 +49,9 @@ public:
             groupMembers.push_back(player);
         }
 
-        for (auto const& _creature : creaturedie)
+        for (auto const& creature : creatureDie)
         {
-            Loot* loot = &_creature->loot;
+            Loot* loot = &creature->loot;
             gold += loot->gold;
             loot->gold = 0;
             uint32 maxSlot = loot->GetMaxSlotInLootFor(player);
@@ -84,22 +84,22 @@ public:
 
             if (!loot->empty())
             {
-                if (!_creature->IsAlive())
+                if (!creature->IsAlive())
                 {
-                    _creature->AllLootRemovedFromCorpse();
-                    _creature->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
+                    creature->AllLootRemovedFromCorpse();
+                    creature->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
                     loot->clear();
 
-                    if (_creature->HasUnitFlag(UNIT_FLAG_SKINNABLE))
+                    if (creature->HasUnitFlag(UNIT_FLAG_SKINNABLE))
                     {
-                        _creature->RemoveUnitFlag(UNIT_FLAG_SKINNABLE);
+                        creature->RemoveUnitFlag(UNIT_FLAG_SKINNABLE);
                     }
                 }
             }
             else
             {
-                _creature->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
-                _creature->AllLootRemovedFromCorpse();
+                creature->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
+                creature->AllLootRemovedFromCorpse();
             }
         }
 
@@ -118,6 +118,23 @@ public:
                 data << uint8(0); // Controls the text displayed in chat. 0 is "Your share is..."
                 groupMember->GetSession()->SendPacket(&data);
             }
+        }
+    }
+
+    void OnCreatureKilledByPet(Player* petOwner, Creature* killed) override
+    {
+        OnCreatureLootAOE(petOwner);
+
+        // Remove items from the creature's loot
+        Loot* loot = &killed->loot;
+        loot->clear();
+
+        killed->AllLootRemovedFromCorpse();
+        killed->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
+
+        if (killed->HasUnitFlag(UNIT_FLAG_SKINNABLE))
+        {
+            killed->RemoveUnitFlag(UNIT_FLAG_SKINNABLE);
         }
     }
 
@@ -141,7 +158,4 @@ void AddSC_aoe_lootScripts()
 {
     new AoeLoot();
 }
-
-
-
 
